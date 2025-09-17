@@ -49,18 +49,18 @@ kubectl port-forward svc/kibana 5601:5601
 
 ```sh
 $ k get po -o wide
-NAME                             READY   STATUS    RESTARTS   AGE     IP             NODE               NOMINATED NODE   READINESS GATES
-elasticsearch-5599b96998-pg2ff   1/1     Running   0          5m29s   10.244.1.170   kubeadm-worker01   <none>           <none>
-filebeat-hhckt                   1/1     Running   0          5m29s   10.244.2.138   kubeadm-worker02   <none>           <none>
-filebeat-tnlhn                   1/1     Running   0          5m29s   10.244.1.167   kubeadm-worker01   <none>           <none>
-kibana-d9c96cd58-6ltbt           1/1     Running   0          5m29s   10.244.2.137   kubeadm-worker02   <none>           <none>
-logstash-757b57ff9b-sw82n        1/1     Running   0          5m29s   10.244.1.168   kubeadm-worker01   <none>           <none>
-order-service-59678cc76-7qlv9    1/1     Running   0          5m11s   10.244.2.139   kubeadm-worker02   <none>           <none>
+NAME                             READY   STATUS    RESTARTS   AGE     IP             NODE              
+elasticsearch-5599b96998-pg2ff   1/1     Running   0          5m29s   10.244.1.170   kubeadm-worker01 
+filebeat-hhckt                   1/1     Running   0          5m29s   10.244.2.138   kubeadm-worker02
+filebeat-tnlhn                   1/1     Running   0          5m29s   10.244.1.167   kubeadm-worker01
+kibana-d9c96cd58-6ltbt           1/1     Running   0          5m29s   10.244.2.137   kubeadm-worker02
+logstash-757b57ff9b-sw82n        1/1     Running   0          5m29s   10.244.1.168   kubeadm-worker01
+order-service-59678cc76-7qlv9    1/1     Running   0          5m11s   10.244.2.139   kubeadm-worker02
 
 $ siege -c1 -d5 -t60M http://localhost:8081/order/2
 
-order-service在node02上, 观察node02的filebeat的日志
-
-$ kubectl exec -it filebeat-kndqk -- ls -l /var/log/containers/order-service-59678cc76-7qlv9_default_order-service-faeff5a4fcc911028b06565656a4191ba63f97899dae5ae1f67ab9bf9e91f04d.log
-lrwxrwxrwx 1 root root 108 Sep 17 10:22 /var/log/containers/order-service-59678cc76-7qlv9_default_order-service-faeff5a4fcc911028b06565656a4191ba63f97899dae5ae1f67ab9bf9e91f04d.log -> /var/log/pods/default_order-service-59678cc76-7qlv9_e097fe2d-b4af-44c4-91be-9bb42914c3cf/order-service/0.log
+# 注意如果修改了cm,删除pod才会生效
+$ kubectl apply -f k8s-manifest
+$ kubectl delete po -l k8s-pod=filebeat
+$ kubectl delete po -l  io.kompose.service=logstash
 ```

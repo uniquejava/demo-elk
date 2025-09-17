@@ -44,7 +44,7 @@ services:
       - "9200:9200"
 
   logstash:
-    image: docker.elastic.co/logstash/logstash:7.17.28
+    image: docker.elastic.co/logstash/logstash:8.17.4
     user: root  # ✅ 用 root 运行，能读取 root 所有权的日志文件
     ports:
       - "24224:24224"

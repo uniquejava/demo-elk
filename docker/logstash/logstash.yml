@@ -1,0 +1,6 @@
+# 关闭内置的 X-Pack Monitoring 功能，避免连接 ES 时出现权限错误
+xpack.monitoring.enabled: false
+
+# 其他默认配置保持不变（可以根据需要添加）
+# http.host: "0.0.0.0"
+# pipeline.workers: 1

@@ -1,0 +1,80 @@
+services:
+  order-service:
+    build: ./
+    image: order-service
+    mem_limit: 512m
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+    ports:
+      - "8080:8080"
+
+    # 显式配置日志驱动，确保日志轮转可控，避免容器日志占用过多磁盘空间。
+    # Docker 默认使用 'json-file' 驱动，将容器 stdout/stderr 以 JSON 行格式写入：
+    #   /var/lib/docker/containers/<container-id>/<container-id>-json.log
+    #
+    # 由于 Logstash 运行在 Rancher Desktop 的 Linux VM 内部，它可以直读该路径下的日志文件。
+    # 不配置此选项时，Docker 仍会默认使用 json-file，但不会限制日志大小，可能导致 VM 磁盘满。
+    #
+    # 可通过以下命令进入 VM 查看日志文件：
+    #   rdctl shell
+    #   sudo ls /var/lib/docker/containers/
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"   # 单个日志文件最大 10MB
+        max-file: "3"     # 最多保留 3 个轮转文件，共最多 30MB
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.4
+    hostname: elasticsearch
+    environment:
+      - discovery.type=single-node  # 单节点模式必须
+      - "ES_JAVA_OPTS=-Xms2g -Xmx4g" # 控制内存用量
+      - xpack.security.enabled=false # 仅用于开发环境，生产必须启用
+      - ingest.geoip.downloader.enabled=false # 避免自动下载 GeoIP 数据浪费资源。
+    volumes:
+      - es_data:/usr/share/elasticsearch/data # 数据持久化(docker compose down不会删除)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      interval: 10s
+      timeout: 10s  # 首次启动可能需要更长时间
+      retries: 10
+      start_period: 30s
+    ports:
+      - "9200:9200"
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.17.28
+    user: root  # ✅ 用 root 运行，能读取 root 所有权的日志文件
+    ports:
+      - "24224:24224"
+    volumes:
+      # Logstash 会加载 pipeline 目录下的所有 .conf 文件并按文件名顺序执行
+      - ./docker/logstash/pipeline:/usr/share/logstash/pipeline
+      # 挂载主配置文件，readonly
+      - ./docker/logstash/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
+      # ⚠️ WARNING: 下面这一行仅适用于 Rancher Desktop（Lima VM）
+      # 因为 Docker daemon 运行在 VM 内，容器日志位于 VM 的 /var/lib/docker/containers
+      # 在 Docker Desktop、Linux、CI 环境中此路径无效！
+      # 生产环境应使用 Filebeat 或 Fluentd 从容器 stdout 收集日志
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - logstash_sincedb:/usr/share/logstash/sincedb
+    environment:
+      - LS_JAVA_OPTS=-Xms512m -Xmx1g
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.17.4
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200  # 必须使用服务名，不能用 localhost
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+volumes:
+  logstash_sincedb:
+  es_data:

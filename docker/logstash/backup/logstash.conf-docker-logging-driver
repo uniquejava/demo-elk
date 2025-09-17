@@ -1,0 +1,27 @@
+# 可以把这个文件拆成3个, logstash会顺次读取pipeline目录下的所有conf文件
+# 01-input.conf
+# 02-filter.conf
+# 03-output.conf
+input {
+  file {
+    path => "/var/lib/docker/containers/*/*-json.log"
+    start_position => "beginning"
+    sincedb_path => "/usr/share/logstash/sincedb/docker.sincedb"
+    codec => json
+  }
+}
+filter {
+  # 解析 Spring Boot 日志（如果需要）
+}
+output {
+# 输出到 stdout
+#  stdout {
+#    codec => rubydebug
+#  }
+
+   # 接入 ES
+   elasticsearch {
+     hosts => ["http://elasticsearch:9200"]
+     index => "logstash-%{+YYYY.MM.dd}"
+   }
+}

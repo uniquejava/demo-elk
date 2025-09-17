@@ -1,0 +1,30 @@
+# ./docker/filebeat/filebeat.yml
+filebeat.inputs:
+  - type: container
+    paths:
+      - /var/lib/docker/containers/*/*.log
+    processors:
+      - add_docker_metadata: ~   # ✅ 必须是这个完整拼写！
+      - drop_event:
+          when:
+            not:
+              equals:
+                container.labels.filebeat_enable: "true"
+      # “宽采集，严处理” —— Filebeat 尽量多采集，让下游（Logstash/Elasticsearch）做精细过滤和清洗。
+#      - drop_fields:
+#          fields: ["agent", "event", "input", "host", "cloud", "ecs"]
+#          when:
+#            not:
+#              equals:
+#                container.labels.com_docker_compose_service: "order-service"
+
+output.logstash:
+  hosts: ["logstash:5044"]
+
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /var/log/filebeat
+  name: filebeat
+  keepfiles: 7
+  permissions: 0644

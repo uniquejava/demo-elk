@@ -9,13 +9,14 @@
 5. ES 8.x
 
 ## Plan
-1. [x] 收集 非 json 格式的app日志，通过 Filebeat 收集，Logstash清洗, 并存储到 ES
-2. [ ] json 格式的 app日志
-3. [ ] 使用k8s代替docker compose
-4. [ ] 使用 sidecar 模式收集app日志
-5. [ ] 收集worker node的日志
-6. [ ] 收集中间件的日志
-7. [ ] 使用kafka做日志缓冲
+1. [x] 收集 非 json 格式的app日志，通过 Filebeat 收集，Logstash清洗, 并存储到 ES, 见 `plain_text` 分支
+2. [x] 使用k8s代替docker compose
+3. [ ] 优化manifest组织结构和使用独立logging命名空间
+4. [ ] json 格式的 app日志
+5. [ ] 使用 sidecar 模式收集app日志
+6. [ ] 收集worker node的日志
+7. [ ] 收集中间件的日志
+8. [ ] 使用kafka做日志缓冲
 
 ## Quick start
 ```shell

@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: filebeat
+  labels:
+    k8s-app: filebeat
+spec:
+  selector:
+    matchLabels:
+      k8s-app: filebeat
+  template:
+    metadata:
+      labels:
+        k8s-app: filebeat
+    spec:
+      serviceAccountName: filebeat
+      containers:
+        - name: filebeat
+          image: docker.elastic.co/beats/filebeat:8.17.4
+          args:
+            - "-c"
+            - "/etc/filebeat/filebeat.yml"
+            - "-e"
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+          - name: config-volume
+            mountPath: /etc/filebeat/filebeat.yml
+            readOnly: true
+            subPath: filebeat.yml
+          - name: log-volume
+            mountPath: /var/log/containers
+            readOnly: true
+          - name: pods-volume   # 👈 新增
+            mountPath: /var/log/pods
+            readOnly: true
+      volumes:
+      - name: config-volume
+        configMap:
+          name: filebeat-cm2
+      - name: log-volume
+        hostPath:
+          path: /var/log/containers
+          type: Directory
+      - name: pods-volume   # 👈 新增
+        hostPath:
+          path: /var/log/pods
+          type: Directory

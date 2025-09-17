@@ -1,0 +1,44 @@
+apiVersion: v1
+data:
+  logstash.conf: |-
+    input {
+      beats {
+        port => 5044
+        codec => "plain"   # 先按纯文本读，不强行解析
+      }
+    }
+
+
+    filter {
+         # 在所有处理前打印完整事件结构
+         ruby {
+           code => "
+             puts '[DEBUG] === BEFORE FILTER ==='
+             # puts JSON.pretty_generate(event.to_hash)
+             puts event.to_hash.inspect
+             puts '[DEBUG] ====================='
+           "
+         }
+
+      # 只处理 order-service 的日志
+    }
+
+
+    output {
+      # stdout { codec => rubydebug }
+
+      #if "parsed-success" in [tags] {
+        elasticsearch {
+          hosts => ["http://elasticsearch:9200"]
+          index => "app-logs-%{+YYYY.MM.dd}"
+          document_type => "_doc"
+          template_overwrite => true
+        }
+      #}
+
+    }
+kind: ConfigMap
+metadata:
+  labels:
+    io.kompose.service: logstash
+  name: logstash-cm0

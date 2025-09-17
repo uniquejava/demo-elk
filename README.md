@@ -29,6 +29,15 @@ k8s的yaml manifest可以使用 `kompose` 辅助生成.
 1. 针对 Filebeat, 需要删除生成的 deployment + pvc, 修改为 daemon-set, 让 Filebeat 在每个 Node 上运行一个 Pod，读取 `/var/log/containers/*.log`（K8s 标准日志路径），并自动注入 Pod 元数据（namespace、pod name、labels）。
 2. 给它准备sa, 让它可以读取Node 资源, 比如nodeName (add_kubernetes_metadata需要用到)
 
+在 filebeat 的配置文件中添加了 add_kubernetes_metadata 处理器后，Filebeat 将为每个日志事件添加以下元数据字段：
+
+    kubernetes.container.name：容器名称。
+    kubernetes.pod.name：Pod 名称。
+    kubernetes.namespace：命名空间。
+    kubernetes.labels：标签。
+
+
+部署到k8s:
 
 ```sh
 kubectl apply -f k8s-manifest

@@ -6,14 +6,22 @@ data:
       - type: container
         paths:
           - /var/log/containers/*.log    # 符号链接
-          - /var/log/pods/*/*/*.log      # 实际日志文件
+          #- /var/log/pods/*/*/*.log      # 实际日志文件
         processors:
+            # ✅ 1. 防止递归：丢弃所有包含 "logstash" 的日志（无论命名空间）
+          - drop_event:
+              when:
+                contains:
+                  log.file.path: "logstash"
           # 标注
+          # ✅ 3. 添加 kubernetes 元数据（现在安全了，不会处理 Logstash 日志）
           - add_kubernetes_metadata:
-              host: ${NODE_NAME}
+              host: "${NODE_NAME}"
+              in_cluster: true # 指定了是否在集群内运行 Filebeat。如果设置为 true，Filebeat 会自动获取集群的认证信息，以便连接 Kubernetes API Server
+              namespace: "default"
               matchers:
-              - logs_path:
-                  logs_path: "/var/log/containers/  "
+                - logs_path:
+                    logs_path: "/var/log/containers/"
     output.logstash:
       hosts: ["logstash:5044"]
     logging.level: info

@@ -4,6 +4,7 @@ metadata:
   labels:
     io.kompose.service: es-data
   name: es-data
+  namespace: logging
 spec:
   accessModes:
     - ReadWriteOnce

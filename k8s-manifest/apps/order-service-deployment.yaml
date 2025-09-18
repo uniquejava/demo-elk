@@ -6,6 +6,7 @@ metadata:
   labels:
     io.kompose.service: order-service
   name: order-service
+  namespace: apps
 spec:
   replicas: 1
   selector:

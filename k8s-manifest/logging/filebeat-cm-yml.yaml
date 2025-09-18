@@ -34,3 +34,4 @@ metadata:
   labels:
     io.kompose.service: filebeat
   name: filebeat-cm2
+  namespace: logging

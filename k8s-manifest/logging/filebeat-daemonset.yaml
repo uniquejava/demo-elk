@@ -4,6 +4,7 @@ metadata:
   name: filebeat
   labels:
     k8s-app: filebeat
+  namespace: logging
 spec:
   selector:
     matchLabels:

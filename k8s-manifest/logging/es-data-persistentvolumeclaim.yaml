@@ -2,7 +2,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   labels:
-    io.kompose.service: es-data
+    k8s-app: es-data
   name: es-data
   namespace: logging
 spec:

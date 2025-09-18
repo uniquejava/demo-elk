@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    io.kompose.service: kibana
+    k8s-app: kibana
   name: kibana
   namespace: logging
 spec:
@@ -11,4 +11,4 @@ spec:
       port: 5601
       targetPort: 5601
   selector:
-    io.kompose.service: kibana
+    k8s-app: kibana

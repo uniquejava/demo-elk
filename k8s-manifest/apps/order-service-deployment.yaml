@@ -1,37 +1,65 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  annotations:
-    filebeat_enable: "true"
   labels:
-    io.kompose.service: order-service
+    k8s-app: order-service
   name: order-service
   namespace: apps
 spec:
   replicas: 1
   selector:
     matchLabels:
-      io.kompose.service: order-service
+      k8s-app: order-service
   template:
     metadata:
-      annotations:
-        filebeat_enable: "true"
       labels:
-        io.kompose.service: order-service
-        filebeat_enable: "true"
+        k8s-app: order-service
     spec:
       containers:
         - env:
             - name: SPRING_PROFILES_ACTIVE
-              value: default
+              value: docker
           # 必须加80, 见我的笔记 - containerd 设置使用http访问harbor
           image: harbor.local:80/library/order-service:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           name: order-service
           ports:
-            - containerPort: 8080
+            - containerPort: 80
               protocol: TCP
+              name: http
           resources:
             limits:
               memory: 512Mi
+          # 挂载共享日志卷，用于 sidecar 读取
+          volumeMounts:
+            - name: log-volume
+              mountPath: /var/log/app
+
+        # Filebeat sidecar 容器
+        - name: sidecar
+          image: docker.elastic.co/beats/filebeat:8.17.4
+          args:
+            - "-e"  # 输出到 stderr 而不是 syslog
+          resources:
+            limits:
+              memory: 128Mi
+            requests:
+              memory: 64Mi
+          volumeMounts:
+            - name: log-volume
+              mountPath: /var/log/app
+            # 挂载 Filebeat 配置文件
+            - name: filebeat-config
+              mountPath: /usr/share/filebeat/filebeat.yml
+              subPath: filebeat.yml
+      volumes:
+        # 共享日志目录（主容器写入，Filebeat 读取）
+        - name: log-volume
+          emptyDir: {}
+
+        # Filebeat 配置（通过 ConfigMap 注入）
+        - name: filebeat-config
+          configMap:
+            name: filebeat-cm-sidecar
+
       restartPolicy: Always

@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: filebeat-cm-sidecar
+  namespace: apps
+data:
+  filebeat.yml: |
+    filebeat.inputs:
+      - type: filestream
+        paths:
+          - /var/log/app/*.log
+        parsers:
+          - ndjson:
+              target: ""
+              add_error_key: true
+              overwrite_keys: true
+    #output.console:
+    #  pretty: true
+    output.logstash:
+      hosts: ["logstash.logging.svc.cluster.local:5044"]
+
+    logging.level: info

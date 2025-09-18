@@ -17,7 +17,7 @@ main分支只维护json格式的app日志
 2. [x] 使用k8s代替docker compose
 3. [x] 优化manifest组织结构和使用独立logging命名空间
 4. [x] json 格式的 app日志 (with logstash-logback-encoder)
-5. [ ] 使用 sidecar 模式收集app日志
+5. [x] 以 sidecar 模式收集app日志 (with filebeat ndjson parser)
 6. [ ] 收集worker node的日志
 7. [ ] 收集中间件的日志
 8. [ ] 使用kafka做日志缓冲
@@ -40,6 +40,10 @@ k8s的yaml manifest可以使用 `kompose` 辅助生成.
 ### 部署到k8s
 
 ```sh
+$ mvn clean package
+$ docker build -t order-service .
+$ push order-service
+
 $ k get nodes
 NAME               STATUS   ROLES           AGE   VERSION
 kubeadm-master     Ready    control-plane   74d   v1.33.4
@@ -76,7 +80,7 @@ $ siege -c1 -d5 -t60M http://localhost:8081/order/2
 # 不可以使用kubectl rollout restart, 因为cm的修改不会触发pod重启
 $ kubectl apply -f k8s-manifest/logging
 $ kubectl delete po -l k8s-pod=filebeat -n logging
-$ kubectl delete po -l io.kompose.service=logstash -n logging
+$ kubectl delete po -l k8s-app=logstash -n logging
 ```
 
 ## 完美的json格式的app日志
@@ -87,7 +91,7 @@ curl -s http://localhost:80/order/2 > /dev/null && tail -n 1 /var/log/app/app.lo
 
 ```json
 {
-  "timestamp": "2025-09-18T15:16:21.047+0800",
+  "@timestamp": "2025-09-18T15:16:21.047+0800",
   "appname": "demo-elk",
   "logger": "a.s.e.OrderController",
   "level": "INFO",
@@ -95,5 +99,54 @@ curl -s http://localhost:80/order/2 > /dev/null && tail -n 1 /var/log/app/app.lo
   "message": "正在处理订单, orderNumber=ORD1758179781047",
   "traceId": "57e3d72813f08837ca80ed152227f7bd",
   "spanId": "74a75cccd86a0be7"
+}
+```
+
+## 以 sidecar 模式收集app日志
+注释掉 `filebeat-cm-sidecar.yaml` 中的 output.logstash, 修改为 `output.console`, 可以看到被filebeat处理过的spring boot日志输出到控制台
+
+```shell
+k logs -n apps order-service-57bfd65dc-pk8sq -c sidecar
+
+{
+  "@timestamp": "2025-09-18T11:53:11.175Z",
+  "@metadata": {
+    "beat": "filebeat",
+    "type": "_doc",
+    "version": "8.17.4"
+  },
+  "host": {
+    "name": "order-service-57bfd65dc-pk8sq"
+  },
+ ...
+}
+```
+
+
+## ES中接收的日志
+
+```json5
+{
+  "_index": "app-logs-2025.09.18",
+  "_id": "9UzqXJkBA6sL6YX_QSxn",
+  "_version": 1,
+  "_source": {
+    "@version": "1",
+    "appname": "demo-elk",
+    "thread": "http-nio-80-exec-2",
+    "logger": "a.s.e.OrderController",
+    "traceId": "9e33ddd0a226348c7000b77b363429cb",
+    "spanId": "88aeb3ccce9e7fd8",
+    "level": "INFO",
+    "tags": [
+      "beats_input_codec_plain_applied",
+      "parsed-success"
+    ],
+    "@timestamp": "2025-09-18T13:01:07.875Z",
+    "message": "正在处理订单, orderNumber=ORD1758200467875"
+  },
+  "fields": {
+    // OMITTED
+  }
 }
 ```

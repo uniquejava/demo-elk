@@ -32,6 +32,6 @@ metadata:
   annotations:
     use-subpath: "true"
   labels:
-    io.kompose.service: filebeat
+    k8s-app: filebeat
   name: filebeat-cm2
   namespace: logging

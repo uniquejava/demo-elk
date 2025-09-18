@@ -2,20 +2,20 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    io.kompose.service: elasticsearch
+    k8s-app: elasticsearch
   name: elasticsearch
   namespace: logging
 spec:
   replicas: 1
   selector:
     matchLabels:
-      io.kompose.service: elasticsearch
+      k8s-app: elasticsearch
   strategy:
     type: Recreate
   template:
     metadata:
       labels:
-        io.kompose.service: elasticsearch
+        k8s-app: elasticsearch
     spec:
       containers:
         - env:

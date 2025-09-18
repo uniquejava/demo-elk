@@ -2,18 +2,18 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    io.kompose.service: kibana
+    k8s-app: kibana
   name: kibana
   namespace: logging
 spec:
   replicas: 1
   selector:
     matchLabels:
-      io.kompose.service: kibana
+      k8s-app: kibana
   template:
     metadata:
       labels:
-        io.kompose.service: kibana
+        k8s-app: kibana
     spec:
       containers:
         - env:

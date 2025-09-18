@@ -10,7 +10,6 @@ data:
 
     
     filter {
-    
       # 在所有处理前打印完整事件结构（调试用）
       ruby {
         code => "
@@ -20,77 +19,42 @@ data:
         "
       }
     
-      # 只处理 order-service 的日志 —— 使用 kubernetes 标签匹配
-      if [kubernetes][labels][io_kompose_service] == "order-service" {
-    
-        # 使用 grok 解析 Spring Boot 标准日志格式（与之前一致）
-        grok {
-          match => {
-            "message" => "%{TIMESTAMP_ISO8601:app.timestamp}  %{LOGLEVEL:app.level} %{NUMBER:app.pid} --- \[%{DATA:app.application}\] \[%{DATA:app.thread}\] \[%{DATA:app.traceId}\] %{JAVACLASS:app.class} *: %{GREEDYDATA:app.message}"
-          }
-          overwrite => ["message"]  # 把解析后的内容覆盖原 message
-          tag_on_failure => ["grok-failure"]
-        }
-    
-        # 如果解析成功，打标签并清理无用字段
-        if "grok-failure" not in [tags] {
-          mutate {
-            add_tag => ["parsed-success"]
-            remove_field => [
-              "agent",
-              "input",
-              "host",
-              "ecs",
-              "log",
-              "stream",
-              "event",
-              "container"
-            ]
-          }
-          # 使用 ruby 清理 kubernetes 嵌套字段, 可提前在 test_ruby.rb 中调试
-          # 就算处理失败 也会继续,不过event多加一个  [2] "_rubyexception" 的 tag
-          ruby {
-            code => "
-            # 删除 kubernetes 中冗余或高基数字段，保留核心元数据
-            event.remove('[kubernetes][namespace_labels]') if event.include?('[kubernetes][namespace_labels]')
-            event.remove('[kubernetes][namespace_uid]') if event.include?('[kubernetes][namespace_uid]')
-            event.remove('[kubernetes][replicaset]') if event.include?('[kubernetes][replicaset]')
-            event.remove('[kubernetes][node][labels]') if event.include?('[kubernetes][node][labels]')
-            event.remove('[kubernetes][node][uid]') if event.include?('[kubernetes][node][uid]')
-            event.remove('[kubernetes][node][hostname]') if event.include?('[kubernetes][node][hostname]')
-            "
-          }
-        } else {
-          mutate {
-            add_tag => ["parsed-failed"]
-          }
-        }
-    
-        # 时间拟合：从 app.timestamp 中提取真实应用时间戳
-        date {
-          match => [ "app.timestamp", "ISO8601" ]
-          target => "@timestamp"
+        # 保留需要的：提取字段、打标签、清理冗余
+      if [appname] == "demo-elk" {
+        mutate {
+          add_tag => ["parsed-success"]
+          remove_field => [
+            "agent", "input", "host", "ecs", "log", "stream",
+            "event.original", "source", "prospector"
+          ]
         }
       }
+    
+      # 对齐时间(已经在spring boot/filebeat里处理了)
+      #date {
+      #  match => [ "timestamp", "ISO8601" ]
+      #  target => "@timestamp"
+      #}
+        
     }
 
 
     output {
       #stdout { codec => rubydebug }
 
-      #if "parsed-success" in [tags] {
+      if "parsed-success" in [tags] {
         elasticsearch {
           hosts => ["http://elasticsearch:9200"]
           index => "app-logs-%{+YYYY.MM.dd}"
           document_type => "_doc"
           template_overwrite => true
         }
-      #}
+      }
 
     }
 kind: ConfigMap
 metadata:
   labels:
-    io.kompose.service: logstash
+    k8s-app: logstash
   name: logstash-cm0
   namespace: logging

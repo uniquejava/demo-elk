@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    io.kompose.service: elasticsearch
+    k8s-app: elasticsearch
   name: elasticsearch
   namespace: logging
 spec:
@@ -11,4 +11,4 @@ spec:
       port: 9200
       targetPort: 9200
   selector:
-    io.kompose.service: elasticsearch
+    k8s-app: elasticsearch

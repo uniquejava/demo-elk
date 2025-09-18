@@ -12,6 +12,6 @@ metadata:
   annotations:
     use-subpath: "true"
   labels:
-    io.kompose.service: logstash
+    k8s-app: logstash
   name: logstash-cm1
   namespace: logging

@@ -1,6 +1,10 @@
 
 # ELK(Filebeat)
 
+非json格式(低效)的app日志监控 见 `grok_plain_text` 分支
+
+main分支只维护json格式的app日志
+
 ## Environment
 1. Mac Studio (M2 Max)
 2. Rancher Desktop
@@ -9,10 +13,10 @@
 5. Elastic Stack 8.17
 
 ## Plan
-1. [x] 收集 非 json 格式的app日志，通过 Filebeat 收集，Logstash清洗, 并存储到 ES, 见 `plain_text` 分支
+1. [x] 收集 非 json 格式的app日志，通过 Filebeat 收集，Logstash清洗, 并存储到 ES
 2. [x] 使用k8s代替docker compose
 3. [x] 优化manifest组织结构和使用独立logging命名空间
-4. [ ] json 格式的 app日志
+4. [x] json 格式的 app日志 (with logstash-logback-encoder)
 5. [ ] 使用 sidecar 模式收集app日志
 6. [ ] 收集worker node的日志
 7. [ ] 收集中间件的日志
@@ -52,11 +56,11 @@ filebeat-2dmfz                   1/1     Running   0          18s   10.244.1.217
 filebeat-hjdf4                   1/1     Running   0          18s   10.244.2.164   kubeadm-worker02
 kibana-d9c96cd58-xd75t           1/1     Running   0          18s   10.244.2.165   kubeadm-worker02 
 logstash-757b57ff9b-dlrd4        1/1     Running   0          18s   10.244.1.218   kubeadm-worker01
-```
 
 $ k get po -o wide -n apps
 NAME                            READY   STATUS    RESTARTS   AGE   IP             NODE             
 order-service-59678cc76-629w5   1/1     Running   0          24s   10.244.2.166   kubeadm-worker02
+```
 
 ### 测试
 
@@ -73,4 +77,23 @@ $ siege -c1 -d5 -t60M http://localhost:8081/order/2
 $ kubectl apply -f k8s-manifest/logging
 $ kubectl delete po -l k8s-pod=filebeat -n logging
 $ kubectl delete po -l io.kompose.service=logstash -n logging
+```
+
+## 完美的json格式的app日志
+
+```shell
+curl -s http://localhost:80/order/2 > /dev/null && tail -n 1 /var/log/app/app.log | jq .
+```
+
+```json
+{
+  "timestamp": "2025-09-18T15:16:21.047+0800",
+  "appname": "demo-elk",
+  "logger": "a.s.e.OrderController",
+  "level": "INFO",
+  "thread": "http-nio-80-exec-1",
+  "message": "正在处理订单, orderNumber=ORD1758179781047",
+  "traceId": "57e3d72813f08837ca80ed152227f7bd",
+  "spanId": "74a75cccd86a0be7"
+}
 ```

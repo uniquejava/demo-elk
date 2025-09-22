@@ -6,8 +6,8 @@
 main分支只维护json格式的app日志
 
 ## Environment
-1. Mac Studio (M2 Max)
-2. Rancher Desktop
+1. MacOS 15.6
+2. Rancher Desktop 1.19
 3. 本地 K8s 1.33 集群 (2 worker nodes)
 4. 本地 Harbor 服务器 (harbor.local:80/library/order-service:latest)
 5. Elastic Stack 8.17
